@@ -127,15 +127,12 @@ CREATE INDEX IX_Parenting_parent ON Parenting(parent_id);
 CREATE INDEX IX_Marriages_wife ON Marriages(wife_id);
 GO
 
--- Corrected trigger for marriage constraints
+-- Corrected trigger with proper SQL Server syntax
 CREATE TRIGGER trg_Prevent_Married_Women_Relationships
 ON Parenting
 AFTER INSERT, UPDATE
 AS
 BEGIN
-    DECLARE @violation BIT = 0;
-    
-    -- Check for married women in parenting relationships
     IF EXISTS (
         SELECT 1 
         FROM inserted i
@@ -143,14 +140,11 @@ BEGIN
         WHERE c.gender = 'Female' 
         AND c.marital_status = 'Married'
         AND i.parent_id <> ISNULL(c.father_id, -1)
+    )
     BEGIN
-        SET @violation = 1;
-    END
-    
-    IF @violation = 1
-    BEGIN
-        RAISERROR('Married women cannot enter parenting relationships with other men', 16, 1);
         ROLLBACK TRANSACTION;
+        RAISERROR('Married women cannot enter parenting relationships with other men', 16, 1);
+        RETURN;
     END
 END;
 GO
@@ -173,16 +167,16 @@ BEGIN
         -- Verify the woman isn't already married
         IF EXISTS (SELECT 1 FROM Citizens WHERE id = @wife_id AND marital_status = 'Married')
         BEGIN
-            RAISERROR('The woman is already married', 16, 1);
             ROLLBACK TRANSACTION;
+            RAISERROR('The woman is already married', 16, 1);
             RETURN;
         END
         
         -- Verify the man isn't already married
         IF EXISTS (SELECT 1 FROM Citizens WHERE id = @husband_id AND marital_status = 'Married')
         BEGIN
-            RAISERROR('The man is already married', 16, 1);
             ROLLBACK TRANSACTION;
+            RAISERROR('The man is already married', 16, 1);
             RETURN;
         END
         
@@ -193,8 +187,8 @@ BEGIN
         
         IF @husband_gender != 'Male' OR @wife_gender != 'Female'
         BEGIN
-            RAISERROR('Marriage must be between a male and female', 16, 1);
             ROLLBACK TRANSACTION;
+            RAISERROR('Marriage must be between a male and female', 16, 1);
             RETURN;
         END
         
@@ -238,8 +232,8 @@ BEGIN
             AND wife_id = @wife_id 
             AND divorce_date IS NULL)
         BEGIN
-            RAISERROR('These individuals are not currently married', 16, 1);
             ROLLBACK TRANSACTION;
+            RAISERROR('These individuals are not currently married', 16, 1);
             RETURN;
         END
         
